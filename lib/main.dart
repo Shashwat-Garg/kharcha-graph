@@ -1,4 +1,8 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:syncfusion_flutter_pdf/pdf.dart';
 
 void main() {
   runApp(const KharchaGraph());
@@ -14,20 +18,6 @@ class KharchaGraph extends StatelessWidget {
       title: 'Kharcha Graph',
       theme: ThemeData(
         // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
       ),
@@ -55,71 +45,67 @@ class KharchaGraphHomePage extends StatefulWidget {
 }
 
 class _KharchaGraphHomePageState extends State<KharchaGraphHomePage> {
-  int _counter = 0;
+  String text = '';
 
-  void _incrementCounter() {
+  void _updateText(String newText) {
     setState(() {
       // This call to setState tells the Flutter framework that something has
       // changed in this State, which causes it to rerun the build method below
       // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
+      // test without calling setState(), then the build method would not be
       // called again, and so nothing would appear to happen.
-      _counter++;
+      text += newText;
     });
   }
 
   @override
+  void initState() {
+    super.initState();
+    readTransactionPdf();
+  }
+
+  Future<void> readTransactionPdf() async {
+    if (Platform.isAndroid) {
+      await Permission.manageExternalStorage.request();
+    } else {
+      await Permission.storage.request();
+    }
+    final pdfBytes = await File('/storage/emulated/0/Download/test.pdf').readAsBytes();
+    final PdfDocument pdfDocument = PdfDocument(inputBytes: pdfBytes);
+    final List<TextLine> textLines = PdfTextExtractor(pdfDocument).extractTextLines();
+    for (TextLine textLine in textLines) {
+      _updateText('${textLine.fontName} | ${textLine.fontSize} | ${textLine.bounds.center.dx},${textLine.bounds.center.dy} | ${textLine.text}\n');
+    }
+
+    pdfDocument.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
+    // This method is rerun every time setState is called
     //
     // The Flutter framework has been optimized to make rerunning build methods
     // fast, so that you can just rebuild anything that needs updating rather
     // than having to individually change instances of widgets.
     return Scaffold(
       appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
         title: Text(widget.title),
       ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text(
-              'You have pushed the button this many times:',
+      body: Flex(
+        direction: Axis.vertical,
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.vertical,
+              child: Text(
+                text,
+                style: Theme.of(context).textTheme.headlineMedium,
+              ),
             ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
     );
   }
 }

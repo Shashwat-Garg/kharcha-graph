@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:syncfusion_flutter_pdf/pdf.dart';
@@ -70,14 +71,21 @@ class _KharchaGraphHomePageState extends State<KharchaGraphHomePage> {
     } else {
       await Permission.storage.request();
     }
-    final pdfBytes = await File('/storage/emulated/0/Download/test.pdf').readAsBytes();
-    final PdfDocument pdfDocument = PdfDocument(inputBytes: pdfBytes);
-    final List<TextLine> textLines = PdfTextExtractor(pdfDocument).extractTextLines();
-    for (TextLine textLine in textLines) {
-      _updateText('${textLine.fontName} | ${textLine.fontSize} | ${textLine.bounds.center.dx},${textLine.bounds.center.dy} | ${textLine.text}\n');
-    }
 
-    pdfDocument.dispose();
+    FilePickerResult? pickedFile = await FilePicker.platform.pickFiles(
+      dialogTitle: 'Pick a transaction document',
+      type: FileType.custom,
+      allowedExtensions: ['pdf']);
+    if (pickedFile != null && pickedFile.files.single.path != null) {
+      final pdfBytes = await File(pickedFile.files.single.path!).readAsBytes();
+      final PdfDocument pdfDocument = PdfDocument(inputBytes: pdfBytes);
+      final List<TextLine> textLines = PdfTextExtractor(pdfDocument).extractTextLines();
+      for (TextLine textLine in textLines) {
+        _updateText('${textLine.fontName} | ${textLine.fontSize} | ${textLine.bounds.center.dx},${textLine.bounds.center.dy} | ${textLine.text}\n');
+      }
+
+      pdfDocument.dispose();
+    }
   }
 
   @override

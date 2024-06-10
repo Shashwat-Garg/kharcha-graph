@@ -47,12 +47,12 @@ class KharchaGraphHomePage extends StatefulWidget {
 }
 
 class _KharchaGraphHomePageState extends State<KharchaGraphHomePage> {
-  String _text = '';
+  List<TransactionInfo> _transactionsList = [];
 
-  // Updates the text that is shown on the app
-  void _updateText(String newText) {
+  // Updates the transations list that is shown on the app
+  void _updateTransactionsList(List<TransactionInfo> transactionsList) {
     setState(() {
-      _text += newText;
+      _transactionsList = transactionsList;
     });
   }
 
@@ -80,8 +80,7 @@ class _KharchaGraphHomePageState extends State<KharchaGraphHomePage> {
     if (pickedFile != null && pickedFile.files.single.path != null) {
       final pdfBytes = await File(pickedFile.files.single.path!).readAsBytes();
       List<TransactionInfo> transactionsList = await readTransactionPdf(pdfBytes);
-      final allLines = transactionsList.map((transaction) => '${transaction.date} | ${transaction.merchant} | ${transaction.type} | ${transaction.amount}');
-      _updateText(allLines.join('\n'));
+      _updateTransactionsList(transactionsList);
     }
   }
 
@@ -103,9 +102,26 @@ class _KharchaGraphHomePageState extends State<KharchaGraphHomePage> {
           Expanded(
             child: SingleChildScrollView(
               scrollDirection: Axis.vertical,
-              child: Text(
-                _text,
-                style: Theme.of(context).textTheme.headlineMedium,
+              child: Table(
+                border: TableBorder.all(color: Colors.black, style: BorderStyle.solid, width: 2),
+                children: [
+                  const TableRow(
+                    children: [
+                      Text(r'Date'),
+                      Text(r'Merchant'),
+                      Text(r'Type'),
+                      Text(r'Amount'),
+                    ],
+                  ),
+                  for (TransactionInfo transactionInfo in _transactionsList) TableRow(
+                    children: [
+                      Text(transactionInfo.date),
+                      Text(transactionInfo.merchant),
+                      Text(transactionInfo.type.name),
+                      Text(transactionInfo.amount.toString()),
+                    ],
+                  ),
+                ],
               ),
             ),
           ),

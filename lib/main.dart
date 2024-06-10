@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:kharcha_graph/models/transaction_info.dart';
+import 'package:kharcha_graph/models/transaction_type.dart';
 import 'package:kharcha_graph/util/read_pdf_content.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -103,22 +104,22 @@ class _KharchaGraphHomePageState extends State<KharchaGraphHomePage> {
             child: SingleChildScrollView(
               scrollDirection: Axis.vertical,
               child: Table(
-                border: TableBorder.all(color: Colors.black, style: BorderStyle.solid, width: 2),
+                border: TableBorder.all(color: Colors.black, style: BorderStyle.solid, width: 1),
                 children: [
                   const TableRow(
                     children: [
-                      Text(r'Date'),
-                      Text(r'Merchant'),
-                      Text(r'Type'),
-                      Text(r'Amount'),
+                      Text(r'Date', style: TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.center,),
+                      Text(r'Merchant', style: TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.center),
+                      Text(r'Type', style: TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.center),
+                      Text(r'Amount', style: TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.center),
                     ],
                   ),
                   for (TransactionInfo transactionInfo in _transactionsList) TableRow(
                     children: [
-                      Text(transactionInfo.date),
-                      Text(transactionInfo.merchant),
-                      Text(transactionInfo.type.name),
-                      Text(transactionInfo.amount.toString()),
+                      Text(transactionInfo.date.toString(), textAlign: TextAlign.center),
+                      Text(transactionInfo.merchant, textAlign: TextAlign.center),
+                      Text(transactionInfo.type.displayName, textAlign: TextAlign.center),
+                      Text(transactionInfo.amount.toString(), textAlign: TextAlign.center),
                     ],
                   ),
                 ],

@@ -5,7 +5,7 @@ enum TransactionType {
 }
 
 extension TransationTypeExtension on TransactionType {
-  String get name {
+  String get displayName {
     switch(this) {
       case TransactionType.debit:
         return r'DEBIT';

@@ -20,7 +20,6 @@ Future<List<TransactionInfo>> readTransactionPdf(Uint8List pdfBytes) async {
 
   // Now, let's try getting the debit or credit transactions
   for (int lineIndex = 0; lineIndex < textLines.length; lineIndex++) {
-    // print(textLine.text);
     final String lineText = textLines[lineIndex].text.replaceAll(' ', '');
 
     // The number of columns are actually 1 less, since we add the page's end as well
@@ -104,9 +103,62 @@ List<double> _getColumnBeginnings(List<TextLine> textLines, double pdfWidth) {
 
 TransactionInfo _getTransactionInfoForLine(List<String> currentLine) {
   return TransactionInfo(
-    date: currentLine[0],
-    type: TransactionType.values.where((type) => type.name == currentLine[2]).first,
+    date: _convertDateToDateTime(currentLine[0]),
+    type: TransactionType.values.where((type) => type.displayName == currentLine[2]).first,
     amount: double.parse(currentLine[3].replaceAll(RegExp(r'[^0-9.]'), r'')),
-    merchant: currentLine[1],
+
+    // Replace unnecessary text
+    merchant: currentLine[1].replaceAll(r'Paidto', r'').replaceAll(r'Receivedfrom', r''),
   );
+}
+
+// Converts the given date string to a DateTime
+// Format of the date string here is:
+// MMMdd,yyyyhh:mm[am/pm]
+DateTime _convertDateToDateTime(String dateString) {
+  // DateTime date = DateFormat('MMMdd,yyyyhh:mmaa').parse(dateString);
+  // return date;
+  int month = _getMonthIndex(dateString.substring(0, 3));
+  int day = int.parse(dateString.substring(3, 5));
+  int year = int.parse(dateString.substring(6, 10));
+  int hour = int.parse(dateString.substring(10, 12));
+  int minute = int.parse(dateString.substring(13, 15));
+  if (dateString.substring(16) == 'pm') {
+    hour += 12;
+  }
+
+  DateTime date = DateTime(year, month, day, hour, minute);
+  return date;
+}
+
+// Gets the month index for given MMM string
+int _getMonthIndex(String monthString) {
+  switch(monthString) {
+    case 'Jan':
+      return 1;
+    case 'Feb':
+      return 2;
+    case 'Mar':
+      return 3;
+    case 'Apr':
+      return 4;
+    case 'May':
+      return 5;
+    case 'Jun':
+      return 6;
+    case 'Jul':
+      return 7;
+    case 'Aug':
+      return 8;
+    case 'Sep':
+      return 9;
+    case 'Oct':
+      return 10;
+    case 'Nov':
+      return 11;
+    case 'Dec':
+      return 12;
+    default:
+      return 0;
+  }
 }

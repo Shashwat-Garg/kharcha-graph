@@ -46,8 +46,13 @@ class KharchaGraphHomePage extends StatefulWidget {
 }
 
 class _KharchaGraphHomePageState extends State<KharchaGraphHomePage> {
-  String text = '';
+  String _text = '';
+  
+  // Stores the column bounds' left value
+  // so that we can understand which texts are lying in which column
+  final List<double> _columnBeginnings = [];
 
+  // Updates the text that is shown on the app
   void _updateText(String newText) {
     setState(() {
       // This call to setState tells the Flutter framework that something has
@@ -55,36 +60,137 @@ class _KharchaGraphHomePageState extends State<KharchaGraphHomePage> {
       // so that the display can reflect the updated values. If we changed
       // test without calling setState(), then the build method would not be
       // called again, and so nothing would appear to happen.
-      text += newText;
+      _text += newText;
     });
+  }
+
+  // Adds a column beginning to the state's array
+  void _addColumnBeginning(double columnBeginning) {
+    // setState(() {
+    //   _columnBeginnings.add(columnBeginning);
+    // });
+    _columnBeginnings.add(columnBeginning);
   }
 
   @override
   void initState() {
     super.initState();
+    
+    // As the page is rendered, ensure to read the PDF
     readTransactionPdf();
   }
 
   Future<void> readTransactionPdf() async {
+    // If the platform is Android, ensure we have storage access
     if (Platform.isAndroid) {
       await Permission.manageExternalStorage.request();
-    } else {
-      await Permission.storage.request();
     }
 
+    // Ask the user to pick a PDF file which we'll parse
     FilePickerResult? pickedFile = await FilePicker.platform.pickFiles(
       dialogTitle: 'Pick a transaction document',
       type: FileType.custom,
       allowedExtensions: ['pdf']);
+    
+    // If the user has correctly chosen a file
     if (pickedFile != null && pickedFile.files.single.path != null) {
       final pdfBytes = await File(pickedFile.files.single.path!).readAsBytes();
       final PdfDocument pdfDocument = PdfDocument(inputBytes: pdfBytes);
-      final List<TextLine> textLines = PdfTextExtractor(pdfDocument).extractTextLines();
-      for (TextLine textLine in textLines) {
-        _updateText('${textLine.fontName} | ${textLine.fontSize} | ${textLine.bounds.center.dx},${textLine.bounds.center.dy} | ${textLine.text}\n');
+      final PdfTextExtractor pdfTextExtractor = PdfTextExtractor(pdfDocument);
+      
+      // Extract all text lines from the PDF
+      final List<TextLine> textLines = pdfTextExtractor.extractTextLines();
+
+      // Find the first text line that contains headers
+      final TextLine headersLine = textLines.where((textLine) => textLine.text.replaceAll(' ', '').contains('TransactionDetails')).first;
+      
+      String currentWord = '';
+      double columnStart = -1;
+
+      // Get the column bounds
+      for (TextWord text in headersLine.wordCollection) {
+        if (text.text.trim().isNotEmpty) {
+          if (currentWord.isEmpty) {
+            columnStart = text.bounds.left;
+          }
+
+          currentWord += text.text;
+          
+          // If the current word is any of the following
+          // it means that the header is complete and we should move to next
+          switch(currentWord) {
+            case 'Date':
+            case 'TransactionDetails':
+            case 'Type':
+            case 'Amount':
+              _addColumnBeginning(columnStart);
+              currentWord = '';
+              columnStart = -1;
+          }
+        }
       }
 
-      pdfDocument.dispose();
+      // As the last bound, add the pdf document width, which is the end of all texts
+      _addColumnBeginning(pdfDocument.pages[0].size.width);
+
+      // Contains all transaction lines of the PDF
+      List<String> allLines = [];
+
+      // Now, let's try getting the debit or credit transactions
+      for (int lineIndex = 0; lineIndex < textLines.length; lineIndex++) {
+        // print(textLine.text);
+        final String lineText = textLines[lineIndex].text.replaceAll(' ', '');
+
+        // The number of columns are actually 1 less, since we add the page's end as well
+        List<String> currentLine = List.filled(_columnBeginnings.length - 1, '');
+
+        // If it is a debit transaction
+        if (lineText.contains('DEBIT')) {
+          // Do these for previous 2 lines as well as the current line
+          // These lines contain the transaction date and time
+          for (int lookBack = 2; lookBack >= 0; lookBack--) {
+            for (TextWord textWord in textLines[lineIndex - lookBack].wordCollection) {
+              final String currentText = textWord.text.trim();
+              if (currentText.isNotEmpty) {
+                final double wordRight = textWord.bounds.right;
+                for (int columnIndex = 0; columnIndex < currentLine.length; columnIndex++) {
+                  if (_columnBeginnings[columnIndex] <= wordRight && _columnBeginnings[columnIndex + 1] >= wordRight) {
+                    currentLine[columnIndex] += currentText;
+                    break;
+                  }
+                }
+              }
+            }
+          }
+        }
+
+        // Else if it is a credit transaction
+        else if (lineText.contains('CREDIT')) {
+          // Do these for previous 2 lines as well as the current line
+          // These lines contain the transaction date and time
+          for (int lookBack = 2; lookBack >= 0; lookBack--) {
+            for (TextWord textWord in textLines[lineIndex - lookBack].wordCollection) {
+              final String currentText = textWord.text.trim();
+              if (currentText.isNotEmpty) {
+                final double wordRight = textWord.bounds.right;
+                for (int columnIndex = 0; columnIndex < currentLine.length; columnIndex++) {
+                  if (_columnBeginnings[columnIndex] <= wordRight && _columnBeginnings[columnIndex + 1] >= wordRight) {
+                    currentLine[columnIndex] += currentText;
+                    break;
+                  }
+                }
+              }
+            }
+          }
+        }
+
+        // If there's a column that is not empty, show it in the app
+        if (currentLine.where((col) => col.isNotEmpty).isNotEmpty) {
+          allLines.add(currentLine.join(' | '));
+        }
+      }
+
+      _updateText(allLines.join('\n'));
     }
   }
 
@@ -107,7 +213,7 @@ class _KharchaGraphHomePageState extends State<KharchaGraphHomePage> {
             child: SingleChildScrollView(
               scrollDirection: Axis.vertical,
               child: Text(
-                text,
+                _text,
                 style: Theme.of(context).textTheme.headlineMedium,
               ),
             ),

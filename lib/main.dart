@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:kharcha_graph/models/transaction_category.dart';
 import 'package:kharcha_graph/models/transaction_info.dart';
 import 'package:kharcha_graph/models/transaction_type.dart';
 import 'package:kharcha_graph/util/read_pdf_content.dart';
@@ -52,17 +53,18 @@ class _KharchaGraphHomePageState extends State<KharchaGraphHomePage> {
   bool showPickPdfButton = true;
   bool showLoader = false;
 
-  // Updates the transations list that is shown on the app
-  void _updateTransactionsList(List<TransactionInfo> transactionsList) {
-    setState(() {
-      _transactionsList = transactionsList;
-    });
-  }
+  // TODO: add ability for user to create categories of their own
+  final List<TransactionCategory> _transactionCategories = [
+    TransactionCategory("Food"),
+    TransactionCategory("Groceries"),
+    TransactionCategory("Internet bill"),
+    TransactionCategory("Medical"),
+    TransactionCategory("Petrol")
+  ];
 
-  @override
-  void initState() {
-    super.initState();
-  }
+  final Map<String, String> _categorizedMerchants = {};
+  String? _currentMerchant;
+  String? _currentCategory;
 
   Future<void> readPdf() async {
     setState(() {
@@ -85,7 +87,6 @@ class _KharchaGraphHomePageState extends State<KharchaGraphHomePage> {
     if (pickedFile != null && pickedFile.files.single.path != null) {
       final pdfBytes = await File(pickedFile.files.single.path!).readAsBytes();
       List<TransactionInfo> transactionsList = await readTransactionPdf(pdfBytes);
-      _updateTransactionsList(transactionsList);
       setState(() {
         _transactionsList = transactionsList;
         showPickPdfButton = false;
@@ -100,7 +101,38 @@ class _KharchaGraphHomePageState extends State<KharchaGraphHomePage> {
     }
   }
 
-  Widget getChild() {
+  void addMerchantToCategory(String merchantString, String category) {
+    double totalExpensesForMerchant = _transactionsList
+      .where((transaction) => transaction.type == TransactionType.debit && transaction.merchant == merchantString)
+      .map((transaction) => transaction.amount)
+      .reduce((value, element) => value + element);
+
+    int index = _transactionCategories.indexWhere((transactionCategory) => transactionCategory.name == category);
+    if (index == -1) {
+      TransactionCategory transactionCategory = TransactionCategory(category);
+      transactionCategory.addMerchant(merchantString);
+      transactionCategory.addAmount(totalExpensesForMerchant);
+      setState(() {
+        _transactionCategories.add(transactionCategory);
+        _categorizedMerchants[merchantString] = category;
+        _currentCategory = null;
+        _currentMerchant = null;
+      });
+    }
+    else {
+      TransactionCategory transactionCategory = _transactionCategories[index];
+      transactionCategory.addAmount(totalExpensesForMerchant);
+      transactionCategory.addMerchant(merchantString);
+      setState(() {
+        _transactionCategories[index] = transactionCategory;
+        _categorizedMerchants[merchantString] = category;
+        _currentCategory = null;
+        _currentMerchant = null;
+      });
+    }
+  }
+
+  Widget renderChild() {
     if (showLoader) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -109,7 +141,8 @@ class _KharchaGraphHomePageState extends State<KharchaGraphHomePage> {
       return renderPickPdfButton();
     }
 
-    return renderPdfData();
+    // return renderPdfData();
+    return renderCategorization();
   }
 
   Widget renderPickPdfButton() {
@@ -156,6 +189,77 @@ class _KharchaGraphHomePageState extends State<KharchaGraphHomePage> {
     );
   }
 
+  Widget renderCategorization() {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        const Text(r'Select a merchant and map to a category'),
+        DropdownButton(
+          hint: const Text(r'Select Merchant'),
+          value: _currentMerchant,
+          items:
+            _transactionsList
+              .where((transactionInfo) => !_categorizedMerchants.containsKey(transactionInfo.merchant))
+              .map((transactionInfo) => transactionInfo.merchant)
+              .toSet()
+              .map((merchant) => DropdownMenuItem(
+                value: merchant,
+                child: Text(merchant)
+              ))
+              .toList(),
+          onChanged: (selectedValue) => {
+            if (selectedValue != null && selectedValue.isNotEmpty) {
+              setState(() {
+                _currentMerchant = selectedValue;
+              })
+            }
+          }
+        ),
+        DropdownButton(
+          hint: const Text(r'Select Category'),
+          value: _currentCategory,
+          items:
+            _transactionCategories
+              .map((transactionCategory) => DropdownMenuItem(
+                value: transactionCategory.name,
+                child: Text(transactionCategory.name)
+              ))
+              .toList(),
+          onChanged: (selectedValue) => {
+            if (selectedValue != null && selectedValue.isNotEmpty) {
+              setState(() {
+                _currentCategory = selectedValue;
+              })
+            }
+          }
+        ),
+        OutlinedButton(
+          onPressed: (_currentCategory != null && _currentMerchant != null) ? () => addMerchantToCategory(_currentMerchant!, _currentCategory!) : null,
+          child: const Text(r'Add merchant to category')
+        ),
+        Container(
+          margin: const EdgeInsets.only(top: 20),
+          child: Table(
+            border: TableBorder.all(color: Colors.black, style: BorderStyle.solid, width: 1),
+            children: [ const TableRow(
+                children: [
+                  Text(r'Category', style: TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.center,),
+                  Text(r'Amount', style: TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.center),
+                ],
+              ),
+              for (TransactionCategory transactionCategory in _transactionCategories) TableRow(
+                children: [
+                  Text(transactionCategory.name, textAlign: TextAlign.center),
+                  Text(transactionCategory.amount.toStringAsFixed(2), textAlign: TextAlign.center),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -167,7 +271,7 @@ class _KharchaGraphHomePageState extends State<KharchaGraphHomePage> {
         direction: Axis.vertical,
         children: [
           Expanded(
-            child: getChild()
+            child: renderChild(),
           ),
         ],
       ),

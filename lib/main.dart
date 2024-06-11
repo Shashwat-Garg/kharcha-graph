@@ -49,6 +49,8 @@ class KharchaGraphHomePage extends StatefulWidget {
 
 class _KharchaGraphHomePageState extends State<KharchaGraphHomePage> {
   List<TransactionInfo> _transactionsList = [];
+  bool showPickPdfButton = true;
+  bool showLoader = false;
 
   // Updates the transations list that is shown on the app
   void _updateTransactionsList(List<TransactionInfo> transactionsList) {
@@ -60,12 +62,14 @@ class _KharchaGraphHomePageState extends State<KharchaGraphHomePage> {
   @override
   void initState() {
     super.initState();
-    
-    // As the page is rendered, ensure to read the PDF
-    readPdf();
   }
 
   Future<void> readPdf() async {
+    setState(() {
+      showPickPdfButton = false;
+      showLoader = true;
+    });
+
     // If the platform is Android, ensure we have storage access
     if (Platform.isAndroid) {
       await Permission.manageExternalStorage.request();
@@ -82,16 +86,78 @@ class _KharchaGraphHomePageState extends State<KharchaGraphHomePage> {
       final pdfBytes = await File(pickedFile.files.single.path!).readAsBytes();
       List<TransactionInfo> transactionsList = await readTransactionPdf(pdfBytes);
       _updateTransactionsList(transactionsList);
+      setState(() {
+        _transactionsList = transactionsList;
+        showPickPdfButton = false;
+        showLoader = false;
+      });
     }
+    else {
+      setState(() {
+        showPickPdfButton = true;
+        showLoader = false;
+      });
+    }
+  }
+
+  Widget getChild() {
+    if (showLoader) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (showPickPdfButton) {
+      return renderPickPdfButton();
+    }
+
+    return renderPdfData();
+  }
+
+  Widget renderPickPdfButton() {
+    return Center(
+      child: OutlinedButton(
+        style: OutlinedButton.styleFrom(
+          textStyle: const TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
+          backgroundColor: Colors.lightBlueAccent,
+          foregroundColor: Colors.blueGrey,
+        ),
+        onPressed: () => readPdf(),
+        child: const Text('Pick a pdf')
+      ),
+    );
+  }
+
+  Widget renderPdfData() {
+    return SingleChildScrollView(
+      scrollDirection: Axis.vertical,
+      child: Table(
+        border: TableBorder.all(color: Colors.black, style: BorderStyle.solid, width: 1),
+        children: [
+          const TableRow(
+            children: [
+              Text(r'Date', style: TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.center,),
+              Text(r'Merchant', style: TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.center),
+              Text(r'Type', style: TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.center),
+              Text(r'Amount', style: TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.center),
+            ],
+          ),
+          for (TransactionInfo transactionInfo in _transactionsList) TableRow(
+            children: [
+              Text(transactionInfo.date.toString(), textAlign: TextAlign.center),
+              Text(transactionInfo.merchant, textAlign: TextAlign.center),
+              Text(transactionInfo.type.displayName, textAlign: TextAlign.center),
+              Text(transactionInfo.amount.toString(), textAlign: TextAlign.center),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
@@ -101,30 +167,7 @@ class _KharchaGraphHomePageState extends State<KharchaGraphHomePage> {
         direction: Axis.vertical,
         children: [
           Expanded(
-            child: SingleChildScrollView(
-              scrollDirection: Axis.vertical,
-              child: Table(
-                border: TableBorder.all(color: Colors.black, style: BorderStyle.solid, width: 1),
-                children: [
-                  const TableRow(
-                    children: [
-                      Text(r'Date', style: TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.center,),
-                      Text(r'Merchant', style: TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.center),
-                      Text(r'Type', style: TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.center),
-                      Text(r'Amount', style: TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.center),
-                    ],
-                  ),
-                  for (TransactionInfo transactionInfo in _transactionsList) TableRow(
-                    children: [
-                      Text(transactionInfo.date.toString(), textAlign: TextAlign.center),
-                      Text(transactionInfo.merchant, textAlign: TextAlign.center),
-                      Text(transactionInfo.type.displayName, textAlign: TextAlign.center),
-                      Text(transactionInfo.amount.toString(), textAlign: TextAlign.center),
-                    ],
-                  ),
-                ],
-              ),
-            ),
+            child: getChild()
           ),
         ],
       ),

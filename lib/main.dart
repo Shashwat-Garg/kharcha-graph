@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:kharcha_graph/models/transaction_category.dart';
 import 'package:kharcha_graph/models/transaction_info.dart';
 import 'package:kharcha_graph/models/transaction_type.dart';
+import 'package:kharcha_graph/ui/category_add_dialog.dart';
 import 'package:kharcha_graph/util/read_pdf_content.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -53,7 +54,6 @@ class _KharchaGraphHomePageState extends State<KharchaGraphHomePage> {
   bool showPickPdfButton = true;
   bool showLoader = false;
 
-  // TODO: add ability for user to create categories of their own
   final List<TransactionCategory> _transactionCategories = [
     TransactionCategory("Food"),
     TransactionCategory("Groceries"),
@@ -128,6 +128,15 @@ class _KharchaGraphHomePageState extends State<KharchaGraphHomePage> {
         _categorizedMerchants[merchantString] = category;
         _currentCategory = null;
         _currentMerchant = null;
+      });
+    }
+  }
+
+  void addNewCategory(String? categoryName) {
+    if (categoryName != null && categoryName.isNotEmpty) {
+      TransactionCategory transactionCategory = TransactionCategory(categoryName);
+      setState(() {
+        _transactionCategories.add(transactionCategory);
       });
     }
   }
@@ -235,6 +244,10 @@ class _KharchaGraphHomePageState extends State<KharchaGraphHomePage> {
         ),
         OutlinedButton(
           onPressed: (_currentCategory != null && _currentMerchant != null) ? () => addMerchantToCategory(_currentMerchant!, _currentCategory!) : null,
+          child: const Text(r'Add merchant to category')
+        ),
+        OutlinedButton(
+          onPressed: () async { addNewCategory(await CategoryAddDialog(context).openCategoryAddDialog()); },
           child: const Text(r'Add merchant to category')
         ),
         Container(

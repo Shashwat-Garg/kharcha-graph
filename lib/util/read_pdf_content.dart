@@ -32,7 +32,8 @@ Future<List<TransactionInfo>> readTransactionPdf(Uint8List pdfBytes) async {
 
     // All columns should be non-empty
     if (currentLine.where((col) => col.isEmpty).isEmpty) {
-      transactionsList.add(_getTransactionInfoForLine(currentLine));
+      String transactionId = _getTransactionIdForCurrentLine(textLines, lineIndex);
+      transactionsList.add(_getTransactionInfoForLine(currentLine, transactionId));
     }
   }
 
@@ -61,6 +62,21 @@ List<String> _getCurrentLine(List<TextLine> textLines, int lineIndex, List<doubl
   }
 
   return currentLine;
+}
+
+String _getTransactionIdForCurrentLine(List<TextLine> textLines, int lineIndex) {
+  String lineString = _getCurrentLineString(textLines[lineIndex + 1].wordCollection);
+
+  // In case the current line ends with the word 'TransactionID'
+  // then the next line contains the transaction ID only
+  if (lineString.endsWith(r'TransactionID')) {
+    lineString = _getCurrentLineString(textLines[lineIndex + 2].wordCollection);
+  }
+  else {
+    lineString = lineString.split(r'TransactionID')[1];
+  }
+
+  return lineString;
 }
 
 List<double> _getColumnBeginnings(List<TextLine> textLines, double pdfWidth) {
@@ -101,8 +117,21 @@ List<double> _getColumnBeginnings(List<TextLine> textLines, double pdfWidth) {
   return columnBeginnings;
 }
 
-TransactionInfo _getTransactionInfoForLine(List<String> currentLine) {
+String _getCurrentLineString(List<TextWord> wordCollection) {
+  String lineString = '';
+  for (TextWord textWord in wordCollection) {
+    final String currentText = textWord.text.trim();
+    if (currentText.isNotEmpty) {
+      lineString += currentText;
+    }
+  }
+
+  return lineString;
+}
+
+TransactionInfo _getTransactionInfoForLine(List<String> currentLine, String transactionId) {
   return TransactionInfo(
+    id: transactionId,
     date: _convertDateToDateTime(currentLine[0]),
     type: TransactionType.values.where((type) => type.displayName == currentLine[2]).first,
     amount: double.parse(currentLine[3].replaceAll(RegExp(r'[^0-9.]'), r'')),

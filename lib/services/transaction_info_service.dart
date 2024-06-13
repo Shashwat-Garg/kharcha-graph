@@ -36,4 +36,10 @@ class TransactionInfoService {
     await db.update(tableName, {'category': category}, where: 'merchant = ?', whereArgs: [merchant]);
     return true;
   }
+
+  Future<bool> deleteAllTransactions() async {
+    Database db = await _dbContext.getDatabase();
+    await db.delete(tableName);
+    return true;
+  }
 }

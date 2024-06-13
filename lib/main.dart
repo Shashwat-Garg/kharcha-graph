@@ -3,13 +3,17 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:kharcha_graph/locator/global_locator.dart';
 import 'package:kharcha_graph/models/transaction_info.dart';
 import 'package:kharcha_graph/models/transaction_type.dart';
+import 'package:kharcha_graph/services/transaction_info_service.dart';
 import 'package:kharcha_graph/ui/category_add_dialog.dart';
+import 'package:kharcha_graph/util/common.dart';
 import 'package:kharcha_graph/util/read_pdf_content.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 void main() {
+  setupGlobalLocator();
   runApp(const KharchaGraph());
 }
 
@@ -50,25 +54,53 @@ class KharchaGraphHomePage extends StatefulWidget {
 }
 
 class _KharchaGraphHomePageState extends State<KharchaGraphHomePage> {
+  final TransactionInfoService _transactionInfoService = globalLocator.get<TransactionInfoService>();
   List<TransactionInfo> _transactionsList = [];
-  bool _showPickPdfButton = true;
-  bool _showLoader = false;
+  bool _showLoader = true;
 
-  final Map<String, double> _transactionCategories = {
-    "Food": 0,
-    "Groceries": 0,
-    "Internet bill": 0,
-    "Medical": 0,
-    "Petrol": 0,
-  };
+  Map<String, double> _transactionCategories = {};
 
-  final Map<String, String> _categorizedMerchants = {};
+  Map<String, String> _categorizedMerchants = {};
   String? _currentMerchant;
   String? _currentCategory;
 
+  @override
+  void initState() {
+    _readTransactionsDataFromDb();
+    super.initState();
+  }
+
+  Future<void> _readTransactionsDataFromDb() async {
+    List<TransactionInfo> transactions = await _transactionInfoService.getAllTransactions();
+    _updateStateBasedOnTransactions(transactions);
+  }
+
+  Future<void> _updateStateBasedOnTransactions(List<TransactionInfo> transactionsList) async {
+    if (transactionsList.isNotEmpty) {
+      transactionsList.addAll(_transactionsList);
+      Iterable<TransactionInfo> transactionsWithCategory = transactionsList
+        .where((transaction) => transaction.category != null && transaction.category!.isNotEmpty);
+      setState(() {
+        _showLoader = false;
+        _transactionsList = transactionsList;
+        _transactionCategories = getCategoryToAmountMapForTransactions(transactionsWithCategory);
+        _categorizedMerchants = {for (TransactionInfo transaction in transactionsWithCategory) transaction.merchant : transaction.category!};
+      });
+    }
+    else {
+      setState(() {
+        _showLoader = false;
+      });
+    }
+  }
+
+  Future<void> _updateDbWithTransactions(List<TransactionInfo> transactionsList) async {
+    await _transactionInfoService.insertTransactions(transactionsList);
+    _readTransactionsDataFromDb();
+  }
+
   void _handlePdfButtonClick() {
     setState(() {
-      _showPickPdfButton = false;
       _showLoader = true;
     });
 
@@ -94,19 +126,9 @@ class _KharchaGraphHomePageState extends State<KharchaGraphHomePage> {
       // Need to use the compute method since the pdf extraction is not async
       // And we don't want to block the UI thread
       List<TransactionInfo> transactionsList = await compute(readTransactionPdf, pdfBytes);
-      if (transactionsList.isNotEmpty) {
-        setState(() {
-          _transactionsList = transactionsList;
-          _showPickPdfButton = false;
-          _showLoader = false;
-        });
-      }
-      else {
-        setState(() {
-          _showPickPdfButton = true;
-          _showLoader = false;
-        });
-      }
+
+      // Save to DB and update state
+      _updateDbWithTransactions(transactionsList);
     }
   }
 
@@ -139,12 +161,13 @@ class _KharchaGraphHomePageState extends State<KharchaGraphHomePage> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    if (_showPickPdfButton) {
-      return _renderPickPdfButton();
-    }
-
-    // return renderPdfData();
-    return _renderCategorization();
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.spaceAround,
+      children: [
+        _renderPickPdfButton(),
+        _transactionsList.isNotEmpty ? _renderCategorization() : const Text(r'No data yet')
+      ],
+    );
   }
 
   Widget _renderPickPdfButton() {

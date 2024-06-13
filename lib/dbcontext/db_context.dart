@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:path/path.dart';
+import 'package:sqflite/sqflite.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 class DbContext {
@@ -8,14 +11,19 @@ class DbContext {
   }
 
   Future<Database> _connectToDb() async {
-    sqfliteFfiInit();
-    var databaseFactory = databaseFactoryFfi;
+    if (Platform.isLinux || Platform.isWindows) {
+      sqfliteFfiInit();
+      databaseFactory = databaseFactoryFfi;
+    }
+
+    String dbPath = join(await getDatabasesPath(), r'kharcha_graph.db');
+
     return databaseFactory.openDatabase(
-      join(await getDatabasesPath(), r'kharcha_graph'),
+      dbPath,
       options: OpenDatabaseOptions(
         onCreate: (db, version) {
           return db.execute(
-            'CREATE TABLE transactions(id TEXT, date TEXT, type TEXT, amount REAL, merchant TEXT, category TEXT)'
+            'CREATE TABLE transactions(id TEXT NOT NULL PRIMARY KEY, date TEXT, type TEXT, amount REAL, merchant TEXT, category TEXT)'
           );
         },
         version: 1,

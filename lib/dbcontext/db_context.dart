@@ -1,7 +1,6 @@
 import 'dart:io';
 
 import 'package:path/path.dart';
-import 'package:sqflite/sqflite.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 class DbContext {
@@ -23,7 +22,7 @@ class DbContext {
       options: OpenDatabaseOptions(
         onCreate: (db, version) {
           return db.execute(
-            'CREATE TABLE transactions(id TEXT NOT NULL PRIMARY KEY, date TEXT, type TEXT, amount REAL, merchant TEXT, category TEXT)'
+            'CREATE TABLE transactions(id TEXT NOT NULL PRIMARY KEY, date DATETIME, type TEXT, amount REAL, merchant TEXT, category TEXT)'
           );
         },
         version: 1,

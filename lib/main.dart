@@ -71,7 +71,9 @@ class _KharchaGraphHomePageState extends State<KharchaGraphHomePage> {
   }
 
   Future<void> _readTransactionsDataFromDb() async {
-    List<TransactionInfo> transactions = await _transactionInfoService.getAllTransactions();
+    // Only get the list of debit transactions
+    List<TransactionInfo> transactions =
+      await _transactionInfoService.getAllTransactions(transactionType: TransactionType.debit);
     _updateStateBasedOnTransactions(transactions);
   }
 
@@ -132,13 +134,15 @@ class _KharchaGraphHomePageState extends State<KharchaGraphHomePage> {
     }
   }
 
-  void _addMerchantToCategory(String merchantString, String category) {
+  Future<void> _addMerchantToCategory(String merchantString, String category) async {
     double totalExpensesForMerchant = _transactionsList
       .where((transaction) => transaction.type == TransactionType.debit && transaction.merchant == merchantString)
       .map((transaction) => transaction.amount)
       .reduce((value, element) => value + element);
 
     _transactionCategories.putIfAbsent(category, () => 0);
+
+    await _transactionInfoService.setMerchantToCategory(merchantString, category);
 
     setState(() {
       _transactionCategories[category] = _transactionCategories[category]! + totalExpensesForMerchant;
@@ -162,10 +166,12 @@ class _KharchaGraphHomePageState extends State<KharchaGraphHomePage> {
     }
 
     return Column(
-      mainAxisAlignment: MainAxisAlignment.spaceAround,
+      mainAxisAlignment: MainAxisAlignment.start,
       children: [
+        const SizedBox(height: 20),
         _renderPickPdfButton(),
-        _transactionsList.isNotEmpty ? _renderCategorization() : const Text(r'No data yet')
+        const SizedBox(height: 20),
+        _transactionsList.isNotEmpty ? _renderCategorization() : const Text(r'No data yet'),
       ],
     );
   }
@@ -239,6 +245,10 @@ class _KharchaGraphHomePageState extends State<KharchaGraphHomePage> {
           onPressed: () async { _addNewCategory(await CategoryAddDialog(context).openCategoryAddDialog()); },
           child: const Text(r'Add another category')
         ),
+        Container(
+          margin: const EdgeInsets.only(top: 20),
+          child: const Text(r'Below is the total expenditure in each category:'),
+        ), 
         Container(
           margin: const EdgeInsets.only(top: 20),
           child: Table(

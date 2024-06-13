@@ -13,7 +13,7 @@ class TransactionInfo {
   Map<String, Object?> toMap() {
     return {
       'id': id,
-      'date': date.toIso8601String(),
+      'date': date.toString(),
       'type': type.displayName,
       'amount': amount,
       'merchant': merchant,

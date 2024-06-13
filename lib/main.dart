@@ -2,7 +2,6 @@ import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:kharcha_graph/models/transaction_category.dart';
 import 'package:kharcha_graph/models/transaction_info.dart';
 import 'package:kharcha_graph/models/transaction_type.dart';
 import 'package:kharcha_graph/ui/category_add_dialog.dart';
@@ -54,13 +53,13 @@ class _KharchaGraphHomePageState extends State<KharchaGraphHomePage> {
   bool showPickPdfButton = true;
   bool showLoader = false;
 
-  final List<TransactionCategory> _transactionCategories = [
-    TransactionCategory("Food"),
-    TransactionCategory("Groceries"),
-    TransactionCategory("Internet bill"),
-    TransactionCategory("Medical"),
-    TransactionCategory("Petrol")
-  ];
+  final Map<String, double> _transactionCategories = {
+    "Food": 0,
+    "Groceries": 0,
+    "Internet bill:": 0,
+    "Medical": 0,
+    "Petrol": 0,
+  };
 
   final Map<String, String> _categorizedMerchants = {};
   String? _currentMerchant;
@@ -107,36 +106,20 @@ class _KharchaGraphHomePageState extends State<KharchaGraphHomePage> {
       .map((transaction) => transaction.amount)
       .reduce((value, element) => value + element);
 
-    int index = _transactionCategories.indexWhere((transactionCategory) => transactionCategory.name == category);
-    if (index == -1) {
-      TransactionCategory transactionCategory = TransactionCategory(category);
-      transactionCategory.addMerchant(merchantString);
-      transactionCategory.addAmount(totalExpensesForMerchant);
-      setState(() {
-        _transactionCategories.add(transactionCategory);
-        _categorizedMerchants[merchantString] = category;
-        _currentCategory = null;
-        _currentMerchant = null;
-      });
-    }
-    else {
-      TransactionCategory transactionCategory = _transactionCategories[index];
-      transactionCategory.addAmount(totalExpensesForMerchant);
-      transactionCategory.addMerchant(merchantString);
-      setState(() {
-        _transactionCategories[index] = transactionCategory;
-        _categorizedMerchants[merchantString] = category;
-        _currentCategory = null;
-        _currentMerchant = null;
-      });
-    }
+    _transactionCategories.putIfAbsent(category, () => 0);
+
+    setState(() {
+      _transactionCategories[category] = _transactionCategories[category]! + totalExpensesForMerchant;
+      _categorizedMerchants[merchantString] = category;
+      _currentCategory = null;
+      _currentMerchant = null;
+    });
   }
 
   void addNewCategory(String? categoryName) {
     if (categoryName != null && categoryName.isNotEmpty) {
-      TransactionCategory transactionCategory = TransactionCategory(categoryName);
       setState(() {
-        _transactionCategories.add(transactionCategory);
+        _transactionCategories.putIfAbsent(categoryName, () => 0);
       });
     }
   }
@@ -228,10 +211,10 @@ class _KharchaGraphHomePageState extends State<KharchaGraphHomePage> {
           hint: const Text(r'Select Category'),
           value: _currentCategory,
           items:
-            _transactionCategories
-              .map((transactionCategory) => DropdownMenuItem(
-                value: transactionCategory.name,
-                child: Text(transactionCategory.name)
+            _transactionCategories.keys
+              .map((category) => DropdownMenuItem(
+                value: category,
+                child: Text(category)
               ))
               .toList(),
           onChanged: (selectedValue) => {
@@ -248,7 +231,7 @@ class _KharchaGraphHomePageState extends State<KharchaGraphHomePage> {
         ),
         OutlinedButton(
           onPressed: () async { addNewCategory(await CategoryAddDialog(context).openCategoryAddDialog()); },
-          child: const Text(r'Add merchant to category')
+          child: const Text(r'Add another category')
         ),
         Container(
           margin: const EdgeInsets.only(top: 20),
@@ -260,10 +243,10 @@ class _KharchaGraphHomePageState extends State<KharchaGraphHomePage> {
                   Text(r'Amount', style: TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.center),
                 ],
               ),
-              for (TransactionCategory transactionCategory in _transactionCategories) TableRow(
+              for (var category in _transactionCategories.keys) TableRow(
                 children: [
-                  Text(transactionCategory.name, textAlign: TextAlign.center),
-                  Text(transactionCategory.amount.toStringAsFixed(2), textAlign: TextAlign.center),
+                  Text(category, textAlign: TextAlign.center),
+                  Text(_transactionCategories[category]!.toStringAsFixed(2), textAlign: TextAlign.center),
                 ],
               ),
             ],

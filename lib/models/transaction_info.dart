@@ -6,7 +6,28 @@ class TransactionInfo {
   TransactionType type;
   double amount;
   String merchant;
+  String? category;
 
+  TransactionInfo(this.id, this.date, this.type, this.amount, this.merchant, [this.category]);
 
-  TransactionInfo({required this.id, required this.date, required this.type, required this.amount, required this.merchant});
+  Map<String, Object?> toMap() {
+    return {
+      'id': id,
+      'date': date.toIso8601String(),
+      'type': type.displayName,
+      'amount': amount,
+      'merchant': merchant,
+      'category': category ?? '',
+    };
+  }
+
+  static TransactionInfo fromMap(Map<String, Object?> transactionMap) {
+    return TransactionInfo(
+      transactionMap['id'] as String,
+      DateTime.parse(transactionMap['date'] as String),
+      getTransactionTypeFromDisplayNameString(transactionMap['type'] as String),
+      transactionMap['amount'] as double,
+      transactionMap['merchant'] as String,
+      transactionMap['category'] as String?);
+  }
 }

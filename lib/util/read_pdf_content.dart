@@ -131,13 +131,13 @@ String _getCurrentLineString(List<TextWord> wordCollection) {
 
 TransactionInfo _getTransactionInfoForLine(List<String> currentLine, String transactionId) {
   return TransactionInfo(
-    id: transactionId,
-    date: _convertDateToDateTime(currentLine[0]),
-    type: TransactionType.values.where((type) => type.displayName == currentLine[2]).first,
-    amount: double.parse(currentLine[3].replaceAll(RegExp(r'[^0-9.]'), r'')),
+    transactionId,
+    _convertDateToDateTime(currentLine[0]),
+    getTransactionTypeFromDisplayNameString(currentLine[2]),
+    double.parse(currentLine[3].replaceAll(RegExp(r'[^0-9.]'), r'')),
 
     // Replace unnecessary text
-    merchant: currentLine[1].replaceAll(r'Paidto', r'').replaceAll(r'Receivedfrom', r''),
+    currentLine[1].replaceAll(r'Paidto', r'').replaceAll(r'Receivedfrom', r''),
   );
 }
 

@@ -16,3 +16,7 @@ extension TransationTypeExtension on TransactionType {
     }
   }
 }
+
+TransactionType getTransactionTypeFromDisplayNameString(String displayName) {
+  return TransactionType.values.firstWhere((type) => type.displayName == displayName);
+}

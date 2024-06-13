@@ -4,7 +4,7 @@ import 'package:kharcha_graph/models/transaction_info.dart';
 import 'package:kharcha_graph/models/transaction_type.dart';
 import 'package:syncfusion_flutter_pdf/pdf.dart';
 
-Future<List<TransactionInfo>> readTransactionPdf(Uint8List pdfBytes) async {
+List<TransactionInfo> readTransactionPdf(Uint8List pdfBytes) {
   // Contains the list of transactions present in the doc
   List<TransactionInfo> transactionsList = [];
 

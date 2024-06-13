@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:kharcha_graph/models/transaction_info.dart';
 import 'package:kharcha_graph/models/transaction_type.dart';
@@ -50,13 +51,13 @@ class KharchaGraphHomePage extends StatefulWidget {
 
 class _KharchaGraphHomePageState extends State<KharchaGraphHomePage> {
   List<TransactionInfo> _transactionsList = [];
-  bool showPickPdfButton = true;
-  bool showLoader = false;
+  bool _showPickPdfButton = true;
+  bool _showLoader = false;
 
   final Map<String, double> _transactionCategories = {
     "Food": 0,
     "Groceries": 0,
-    "Internet bill:": 0,
+    "Internet bill": 0,
     "Medical": 0,
     "Petrol": 0,
   };
@@ -65,12 +66,16 @@ class _KharchaGraphHomePageState extends State<KharchaGraphHomePage> {
   String? _currentMerchant;
   String? _currentCategory;
 
-  Future<void> readPdf() async {
+  void _handlePdfButtonClick() {
     setState(() {
-      showPickPdfButton = false;
-      showLoader = true;
+      _showPickPdfButton = false;
+      _showLoader = true;
     });
 
+    _readPdf();
+  }
+
+  Future<void> _readPdf() async {
     // If the platform is Android, ensure we have storage access
     if (Platform.isAndroid) {
       await Permission.manageExternalStorage.request();
@@ -85,22 +90,27 @@ class _KharchaGraphHomePageState extends State<KharchaGraphHomePage> {
     // If the user has correctly chosen a file
     if (pickedFile != null && pickedFile.files.single.path != null) {
       final pdfBytes = await File(pickedFile.files.single.path!).readAsBytes();
-      List<TransactionInfo> transactionsList = await readTransactionPdf(pdfBytes);
-      setState(() {
-        _transactionsList = transactionsList;
-        showPickPdfButton = false;
-        showLoader = false;
-      });
-    }
-    else {
-      setState(() {
-        showPickPdfButton = true;
-        showLoader = false;
-      });
+      
+      // Need to use the compute method since the pdf extraction is not async
+      // And we don't want to block the UI thread
+      List<TransactionInfo> transactionsList = await compute(readTransactionPdf, pdfBytes);
+      if (transactionsList.isNotEmpty) {
+        setState(() {
+          _transactionsList = transactionsList;
+          _showPickPdfButton = false;
+          _showLoader = false;
+        });
+      }
+      else {
+        setState(() {
+          _showPickPdfButton = true;
+          _showLoader = false;
+        });
+      }
     }
   }
 
-  void addMerchantToCategory(String merchantString, String category) {
+  void _addMerchantToCategory(String merchantString, String category) {
     double totalExpensesForMerchant = _transactionsList
       .where((transaction) => transaction.type == TransactionType.debit && transaction.merchant == merchantString)
       .map((transaction) => transaction.amount)
@@ -116,7 +126,7 @@ class _KharchaGraphHomePageState extends State<KharchaGraphHomePage> {
     });
   }
 
-  void addNewCategory(String? categoryName) {
+  void _addNewCategory(String? categoryName) {
     if (categoryName != null && categoryName.isNotEmpty) {
       setState(() {
         _transactionCategories.putIfAbsent(categoryName, () => 0);
@@ -124,20 +134,20 @@ class _KharchaGraphHomePageState extends State<KharchaGraphHomePage> {
     }
   }
 
-  Widget renderChild() {
-    if (showLoader) {
+  Widget _renderChild() {
+    if (_showLoader) {
       return const Center(child: CircularProgressIndicator());
     }
 
-    if (showPickPdfButton) {
-      return renderPickPdfButton();
+    if (_showPickPdfButton) {
+      return _renderPickPdfButton();
     }
 
     // return renderPdfData();
-    return renderCategorization();
+    return _renderCategorization();
   }
 
-  Widget renderPickPdfButton() {
+  Widget _renderPickPdfButton() {
     return Center(
       child: OutlinedButton(
         style: OutlinedButton.styleFrom(
@@ -148,40 +158,13 @@ class _KharchaGraphHomePageState extends State<KharchaGraphHomePage> {
           backgroundColor: Colors.lightBlueAccent,
           foregroundColor: Colors.blueGrey,
         ),
-        onPressed: () => readPdf(),
+        onPressed: () => _handlePdfButtonClick(),
         child: const Text('Pick a pdf')
       ),
     );
   }
 
-  Widget renderPdfData() {
-    return SingleChildScrollView(
-      scrollDirection: Axis.vertical,
-      child: Table(
-        border: TableBorder.all(color: Colors.black, style: BorderStyle.solid, width: 1),
-        children: [
-          const TableRow(
-            children: [
-              Text(r'Date', style: TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.center,),
-              Text(r'Merchant', style: TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.center),
-              Text(r'Type', style: TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.center),
-              Text(r'Amount', style: TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.center),
-            ],
-          ),
-          for (TransactionInfo transactionInfo in _transactionsList) TableRow(
-            children: [
-              Text(transactionInfo.date.toString(), textAlign: TextAlign.center),
-              Text(transactionInfo.merchant, textAlign: TextAlign.center),
-              Text(transactionInfo.type.displayName, textAlign: TextAlign.center),
-              Text(transactionInfo.amount.toString(), textAlign: TextAlign.center),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget renderCategorization() {
+  Widget _renderCategorization() {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
@@ -226,11 +209,11 @@ class _KharchaGraphHomePageState extends State<KharchaGraphHomePage> {
           }
         ),
         OutlinedButton(
-          onPressed: (_currentCategory != null && _currentMerchant != null) ? () => addMerchantToCategory(_currentMerchant!, _currentCategory!) : null,
+          onPressed: (_currentCategory != null && _currentMerchant != null) ? () => _addMerchantToCategory(_currentMerchant!, _currentCategory!) : null,
           child: const Text(r'Add merchant to category')
         ),
         OutlinedButton(
-          onPressed: () async { addNewCategory(await CategoryAddDialog(context).openCategoryAddDialog()); },
+          onPressed: () async { _addNewCategory(await CategoryAddDialog(context).openCategoryAddDialog()); },
           child: const Text(r'Add another category')
         ),
         Container(
@@ -267,7 +250,7 @@ class _KharchaGraphHomePageState extends State<KharchaGraphHomePage> {
         direction: Axis.vertical,
         children: [
           Expanded(
-            child: renderChild(),
+            child: _renderChild(),
           ),
         ],
       ),

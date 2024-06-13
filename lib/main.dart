@@ -8,6 +8,7 @@ import 'package:kharcha_graph/models/transaction_info.dart';
 import 'package:kharcha_graph/models/transaction_type.dart';
 import 'package:kharcha_graph/services/transaction_info_service.dart';
 import 'package:kharcha_graph/ui/category_add_dialog.dart';
+import 'package:kharcha_graph/ui/visualize_tab.dart';
 import 'package:kharcha_graph/util/common.dart';
 import 'package:kharcha_graph/util/read_pdf_content.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -182,12 +183,14 @@ class _KharchaGraphHomePageState extends State<KharchaGraphHomePage> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.spaceAround,
-      children: [
-        _renderCategorizationInput(),
-        _renderCategorization()
-      ],
+    return SingleChildScrollView(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          _renderCategorizationInput(),
+          _renderCategorization()
+        ],
+      ),
     );
   }
 
@@ -294,7 +297,7 @@ class _KharchaGraphHomePageState extends State<KharchaGraphHomePage> {
           bottom: const TabBar(
             tabs: [
               Tab(icon: Icon(Icons.home), text: r'Home',),
-              Tab(icon: Icon(Icons.data_array), text: r'Add more data'),
+              Tab(icon: Icon(Icons.data_object), text: r'Add more data'),
               Tab(icon: Icon(Icons.bar_chart), text: r'Visualize')
             ]
           ),
@@ -303,7 +306,7 @@ class _KharchaGraphHomePageState extends State<KharchaGraphHomePage> {
           children: [
             _renderHome(),
             _renderPickPdfButton(),
-            const Text(r'Coming soon...'),
+            VisualizeTab(transactions: _transactionsList)
           ],
         ),
       ),

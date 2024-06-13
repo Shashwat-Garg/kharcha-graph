@@ -160,22 +160,6 @@ class _KharchaGraphHomePageState extends State<KharchaGraphHomePage> {
     }
   }
 
-  Widget _renderChild() {
-    if (_showLoader) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.start,
-      children: [
-        const SizedBox(height: 20),
-        _renderPickPdfButton(),
-        const SizedBox(height: 20),
-        _transactionsList.isNotEmpty ? _renderCategorization() : const Text(r'No data yet'),
-      ],
-    );
-  }
-
   Widget _renderPickPdfButton() {
     return Center(
       child: OutlinedButton(
@@ -193,7 +177,21 @@ class _KharchaGraphHomePageState extends State<KharchaGraphHomePage> {
     );
   }
 
-  Widget _renderCategorization() {
+  Widget _renderHome() {
+    if (_showLoader) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.spaceAround,
+      children: [
+        _renderCategorizationInput(),
+        _renderCategorization()
+      ],
+    );
+  }
+
+  Widget _renderCategorizationInput() {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
@@ -245,28 +243,41 @@ class _KharchaGraphHomePageState extends State<KharchaGraphHomePage> {
           onPressed: () async { _addNewCategory(await CategoryAddDialog(context).openCategoryAddDialog()); },
           child: const Text(r'Add another category')
         ),
-        Container(
-          margin: const EdgeInsets.only(top: 20),
-          child: const Text(r'Below is the total expenditure in each category:'),
-        ), 
-        Container(
-          margin: const EdgeInsets.only(top: 20),
-          child: Table(
-            border: TableBorder.all(color: Colors.black, style: BorderStyle.solid, width: 1),
-            children: [ const TableRow(
-                children: [
-                  Text(r'Category', style: TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.center,),
-                  Text(r'Amount', style: TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.center),
-                ],
-              ),
-              for (var category in _transactionCategories.keys) TableRow(
-                children: [
-                  Text(category, textAlign: TextAlign.center),
-                  Text(_transactionCategories[category]!.toStringAsFixed(2), textAlign: TextAlign.center),
-                ],
-              ),
-            ],
-          ),
+      ],
+    );
+  }
+
+  Widget _renderCategorization() {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        const Text(r'Below is the total expenditure in each category:'),
+        const SizedBox(height: 20),
+        Table(
+          border: TableBorder.all(color: Colors.black, style: BorderStyle.solid, width: 1),
+          children: [ const TableRow(
+              children: [
+                Text(r'Category', style: TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.center,),
+                Text(r'Amount', style: TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.center),
+              ],
+            ),
+            // Shows the total expense
+            TableRow(
+              children: [
+                const Text(r'Total', textAlign: TextAlign.center),
+                Text(
+                  _transactionCategories.values.isEmpty ? r'0'
+                    : _transactionCategories.values.reduce((sum, value) => sum + value).toStringAsFixed(2),
+                  textAlign: TextAlign.center)
+              ]
+            ),
+            for (var category in _transactionCategories.keys) TableRow(
+              children: [
+                Text(category, textAlign: TextAlign.center),
+                Text(_transactionCategories[category]!.toStringAsFixed(2), textAlign: TextAlign.center),
+              ],
+            ),
+          ],
         ),
       ],
     );
@@ -274,18 +285,27 @@ class _KharchaGraphHomePageState extends State<KharchaGraphHomePage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: Text(widget.title),
-      ),
-      body: Flex(
-        direction: Axis.vertical,
-        children: [
-          Expanded(
-            child: _renderChild(),
+    return DefaultTabController(
+      length: 3,
+      child: Scaffold(
+        appBar: AppBar(
+          backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+          title: Text(widget.title),
+          bottom: const TabBar(
+            tabs: [
+              Tab(icon: Icon(Icons.home), text: r'Home',),
+              Tab(icon: Icon(Icons.data_array), text: r'Add more data'),
+              Tab(icon: Icon(Icons.bar_chart), text: r'Visualize')
+            ]
           ),
-        ],
+        ),
+        body: TabBarView(
+          children: [
+            _renderHome(),
+            _renderPickPdfButton(),
+            const Text(r'Coming soon...'),
+          ],
+        ),
       ),
     );
   }

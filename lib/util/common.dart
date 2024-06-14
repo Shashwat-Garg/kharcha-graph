@@ -11,3 +11,32 @@ Map<String, double> getCategoryToAmountMapForTransactions(Iterable<TransactionIn
 
   return categoryToAmount;
 }
+
+String getMonthShortHandByIndex(int monthIndex) {
+  switch(monthIndex) {
+    case 1:
+      return r'Jan';
+    case 2:
+      return r'Feb';
+    case 3:
+      return r'Mar';
+    case 4:
+      return r'Apr';
+    case 5:
+      return r'May';
+    case 6:
+      return r'Jun';
+    case 7:
+      return r'Jul';
+    case 8:
+      return r'Aug';
+    case 9:
+      return r'Sep';
+    case 10:
+      return r'Oct';
+    case 11:
+      return r'Nov';
+    default:
+      return r'Dec';
+  }
+}

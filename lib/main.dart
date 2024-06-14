@@ -9,6 +9,7 @@ import 'package:kharcha_graph/models/transaction_type.dart';
 import 'package:kharcha_graph/services/transaction_info_service.dart';
 import 'package:kharcha_graph/ui/category_add_dialog.dart';
 import 'package:kharcha_graph/ui/visualize_tab.dart';
+import 'package:kharcha_graph/ui/visualize_tab_line_chart.dart';
 import 'package:kharcha_graph/util/common.dart';
 import 'package:kharcha_graph/util/read_pdf_content.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -306,7 +307,8 @@ class _KharchaGraphHomePageState extends State<KharchaGraphHomePage> {
           children: [
             _renderHome(),
             _renderPickPdfButton(),
-            VisualizeTab(transactions: _transactionsList)
+            // VisualizeTab(transactions: _transactionsList),
+            VisualizeTabLineChart(transactions: _transactionsList)
           ],
         ),
       ),
